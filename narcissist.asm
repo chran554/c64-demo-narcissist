@@ -1,11 +1,33 @@
 //#define INCLUDE_MUSIC
 #undef INCLUDE_MUSIC
+#define SCROLL
+//#undef SCROLL
+#define RASTER_BORDER
+#define RASTER_SCREEN
+
+#if SCROLL
+.print "Including scroll"
+#else
+.print "Excluding scroll"
+#endif
 
 #if INCLUDE_MUSIC
 .print "Including music"
 #else
 .print "Excluding music"
 #endif
+
+#if RASTER_BORDER || RASTER_SCREEN
+.print "DEBUG Using raster markers:"
+#if RASTER_BORDER
+.print "    * border"
+#endif
+#if RASTER_SCREEN
+.print "    * screen"
+#endif
+#endif
+
+#import "macros.asm"
 
 .const KOALA_TEMPLATE = "C64FILE, Bitmap=$0000, ScreenRam=$1f40, ColorRam=$2328, BackgroundColor = $2710"
 //.var picture = LoadBinary("koala/me.kla", KOALA_TEMPLATE)
@@ -37,17 +59,18 @@
 .const   address_border_color = $D020
 .const   address_screen_color = $D021
 
-.const   constant_font_bank = $0e
-.const   address_font = $3800
-.const   address_font_pointer = $D018
-.const   address_font_character_lo_byte = $0A
-.const   address_font_character_hi_byte = $0B
+.const   constant_font_bank = 2
+.const   address_font = $0000 + ($800 * constant_font_bank) // = $1000
 
-.const   address_sid_music_init = $1000
-.const   address_sid_music_play = address_sid_music_init + 3
+//.const   address_font_pointer = $D018
+//.const   address_font_character_lo_byte = $0A
+//.const   address_font_character_hi_byte = $0B
+
+//.const   address_sid_music_init = $1000
+//.const   address_sid_music_play = address_sid_music_init + 3
 
 .const   raster_position_irq1 = $10
-.const   raster_position_irq2 = $FF
+.const   raster_position_irq2 = $E0
 
 
  *=$0801 "Basic Program"
@@ -106,63 +129,17 @@ no_exit:
 
 
 irq1:
+        // Used to setup display of ego-image
         jsr rasterline_start
 
-        // Address $DD02 coding scheme:
-        // Each bit disable or enable write access to VIC port "A". I.e. the address $DD00.
-        lda $dd02 // Load value of VIC port "A" data direction register
-        ora #%00000011 // Enable both read and write on bit 0-1 on VIC port "A" ($DD00), the "VIC bank selection bits"
-        sta $dd02
+        SetVicBank0_0000_3FFF()                             // Using VIC bank 0
+        SetMultiColorMode()                                 // Set multicolor mode
+        SetBitmapMode()                                     // Set bitmap mode
+        BitmapMode_SetBitmapMemoryVicRelative_2000_3FFF()   // Bitmap memory at $2000-$3FFF
+        BitmapMode_SetScreenMemoryVicRelative_0C00_0FFF()   // Screen memory at $0C00
 
-        // Address $DD00 coding scheme:
-        // Bit 0-1: Select VIC bank (each bank block is $4000 bytes)
-        // Value %xxxx xx11 gives Bank 0
-        // Value %xxxx xx10 gives Bank 1
-        // Value %xxxx xx01 gives Bank 2
-        // Value %xxxx xx00 gives Bank 3
-        // Start address of bank is given by: <bank number> * $4000   (thus bank 2 start at address 2 * $4000 = $8000)
-        // Default(?):
-        .const VIC_bank_0 = %11 // Adress: $0000 - $3FFF
-        .const VIC_bank_1 = %10 // Adress: $4000 - $7FFF
-        .const VIC_bank_2 = %01 // Adress: $8000 - $BFFF
-        .const VIC_bank_3 = %00 // Adress: $C000 - $FFFF
-        lda $dd00
-        and #%11111100 // Reset bit 0-1 (to 0)
-        ora #VIC_bank_0
-        sta $dd00
-
-        // Address $D018 coding scheme (during bitmap mode, see $D011 bit 5):
-        // Bit 0-1: "Unused" during bitmap mode
-        // Bit 3: Relative pointer to bitmap memory: $0000-$1FFF / $2000-$3FFF. Relative to VIC bank start (see $DD00).
-        // Bit 4-7: Relative pointer to screen memory: <bit value> * $400. Relative to VIC bank start (see $DD00).
-        // Default: $C8, %1100 1000
-        lda #$38 // %0011 1000 // bitmap memory at VIC bank start + $2000-$3FFF, screen memory at VIC bank start + (3 * $400 = $C00)
-        sta $d018
-
-        // Address $D016 coding scheme:
-        // Bit 0-2: "Horizontal raster scroll (value 0-7)"
-        // Bit 3: "40-col mode"
-        // Bit 4: "Multicolor mode"
-        // Bit 5-7:
-        // Default: $C8, %1100 1000
-        lda #$d8 // %1101 1000 // scroll=0, 40 columns, multi color mode
-        sta $d016
-
-        // Address $D011 coding scheme:
-        // Bit 0-2: "Vertical raster scroll (value 0-7)"
-        // Bit 3: "24/25-row mode"
-        // Bit 4: "screen off/on"
-        // Bit 5: "Text/Bitmap mode"
-        // Bit 6: "Extended background mode off/on"
-        // Bit 7: Read: Current raster line (bit #8). Write: Raster line to generate interrupt at (bit #8)
-        // Default: $1B, %0001 1011.
-        lda #$3b // %0011 1011 // scroll=3, 25 rows, screen on, bitmap mode
-        sta $d011
-
-        lda #COLOR_WHITE
-        sta $d020 // Border color
-        lda #picture.getBackgroundColor()
-        sta $d021 // Background color
+        SetBorderColor(COLOR_WHITE)
+        SetBackgroundColor(picture.getBackgroundColor())
 
         jsr rasterline_end
 
@@ -182,10 +159,27 @@ irq1:
         //jmp !loop-
 
 irq2:
+        // Used to: play music, set text mode
+        // Set bitmap mode
+        // Set multicolor mode
+        // Using VIC bank 0
+        // Bitmap memory at $2000-$3FFF
+        // Screen memory at $0C00
+
         jsr rasterline_start
+
+        #if SCROLL
+
+        SetTextMode()
+        SetSingleColorMode()
+        TextMode_SetFontBank2_VicRelative_1000_17FF()
+
+        #endif
+
         #if INCLUDE_MUSIC
         jsr music.play
         #endif
+
         jsr rasterline_end
 
         // Set next raster interrupt (back to raster interrupt irq1)
@@ -206,19 +200,13 @@ irq2:
 // Paint a raster band
 // ---------------------------------------------
 rasterline_start:
-        // rasterline start paint
-        lda #COLOR_BLUE
-        sta address_border_color	      // Set screen border color to yellow
-        //sta address_screen_color	      // Set screen color to yellow
-
+        SetBorderColor(COLOR_BLUE)
+        SetBackgroundColor(COLOR_BLUE)
         rts
 
 rasterline_end:
-        // rasterline stop paint
-        lda #COLOR_WHITE
-        sta address_border_color	      // Set screen border color to black
-        //sta address_screen_color	      // Set screen color to black
-
+        SetBorderColor(COLOR_WHITE)
+        SetBackgroundColor(COLOR_WHITE)
         rts
 
 *=$0c00 "screen ram"; .fill picture.getScreenRamSize(), picture.getScreenRam(i)
@@ -229,6 +217,18 @@ rasterline_end:
 *=music.location "music"; .fill music.size, music.getData(i)
 #endif
 
+#if SCROLL
+// ---------------------------------------------
+// Text font
+// ---------------------------------------------
+// More fonts at http://kofler.dot.at/c64/
+// Load font to last 2k block of bank 3
+* = address_font "font"
+    .import binary "fonts/Giana sisters demo font 03-charset.bin"
+//    !bin "fonts/giana_sisters.font.64c",,2
+//    !bin "fonts/devils_collection_25_y.64c",,2
+//    !bin "fonts/double_char_font.bin"
+#endif
 
 
 //----------------------------------------------------------
