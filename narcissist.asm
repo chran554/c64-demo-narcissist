@@ -59,7 +59,7 @@
 .const   address_border_color = $D020
 .const   address_screen_color = $D021
 
-.const   constant_font_bank = 2
+.const   constant_font_bank = 3
 .const   address_font = $0000 + ($800 * constant_font_bank) // = $1000
 
 //.const   address_font_pointer = $D018
@@ -69,15 +69,19 @@
 //.const   address_sid_music_init = $1000
 //.const   address_sid_music_play = address_sid_music_init + 3
 
-.const   raster_position_irq1 = $10
-.const   raster_position_irq2 = $E0
+.const constant_columns_per_line = 40
+.const constant_static_text_line_index = 24
+.const screen_memory_address = $0C00 // Screen memory start (in text mode)
+
+.const raster_position_irq1 = $10
+.const raster_position_irq2 = $EA
 
 
- *=$0801 "Basic Program"
+ *=$0801 "basic start program"
 
  BasicUpstart($0810)
 
- *=$0810 "Program"
+ *=$0810 "program"
 
 Init:
         #if INCLUDE_MUSIC
@@ -171,8 +175,11 @@ irq2:
         #if SCROLL
 
         SetTextMode()
+        //TextMode_Set24RowMode()
         SetSingleColorMode()
-        TextMode_SetFontBank2_VicRelative_1000_17FF()
+        TextMode_SetFontBank3_VicRelative_1800_1FFF()
+
+        jsr printText
 
         #endif
 
@@ -199,19 +206,60 @@ irq2:
 // ---------------------------------------------
 // Paint a raster band
 // ---------------------------------------------
+#if RASTER_BORDER || RASTER_SCREEN
 rasterline_start:
+#if RASTER_BORDER
         SetBorderColor(COLOR_BLUE)
+#endif
+#if RASTER_SCREEN
         SetBackgroundColor(COLOR_BLUE)
+#endif
         rts
 
 rasterline_end:
+#if RASTER_BORDER
         SetBorderColor(COLOR_WHITE)
+#endif
+#if RASTER_SCREEN
         SetBackgroundColor(COLOR_WHITE)
+#endif
         rts
+#endif
 
-*=$0c00 "screen ram"; .fill picture.getScreenRamSize(), picture.getScreenRam(i)
+#if SCROLL
+printText:
+        ldx #$00
+!:
+        lda static_message_text, x
+        cmp #$00  // Have we encountered text message null termination
+        beq !+
+
+        ora #%10000000 // Invert character
+        sta screen_memory_address + constant_columns_per_line * constant_static_text_line_index , x // print static message text data to screen character location
+
+        lda #COLOR_RED
+        sta $d800 + constant_columns_per_line * constant_static_text_line_index , x // print static message text data to screen character location
+
+        inx
+        cpx #$00 // Copy max 255 characters to screen (if register x is wrapped back to 0)
+        bne !-
+!:
+        rts
+#endif
+
+#if SCROLL
+.memblock "static message text"
+static_message_text:
+    .encoding "screencode_mixed"
+    .text @"this is a test text"
+    //.text @" but rather a mimics the looks and operation of a 8*40 LED matrix panel that you can see"
+    //.text @" in the window of your favourite pizza place."
+    .byte $00 // Scroll message text is null terminated
+#endif
+
+*=$0c00 "screen ram"; screenRam: .fill picture.getScreenRamSize(), picture.getScreenRam(i)
 *=$4000 "color ram"; colorRam: .fill picture.getColorRamSize(), picture.getColorRam(i) // (1024b) Later copied to static ram location for color $D800 - $DBFF
-*=$2000 "picture bitmap"; .fill picture.getBitmapSize(), picture.getBitmap(i)
+*=$2000 "picture bitmap"; pictureBitmap: .fill picture.getBitmapSize(), picture.getBitmap(i)
 
 #if INCLUDE_MUSIC
 *=music.location "music"; .fill music.size, music.getData(i)
