@@ -24,7 +24,7 @@
 // .const bank1 = %10 // Address: $4000 - $7FFF
 // .const bank2 = %01 // Address: $8000 - $BFFF
 // .const bank3 = %00 // Address: $C000 - $FFFF
-// Default(?):
+// Default(?): $97, %1001 0111
 
 // Address $D016 coding scheme:
 // Bit 0-2: "Horizontal raster scroll (value 0-7)"
@@ -46,6 +46,7 @@
 // Each bit disable or enable write access to VIC port "A". I.e. the address $DD00.
 // lda $dd02      // Load value of VIC port "A" data direction register
 // ora #%00000011 // Enable both read and write on bit 0-1 on VIC port "A" ($DD00), the "VIC bank selection bits"
+// Default: $3F, %0111 1111
 
 .macro SetBorderColor(color) {
     lda #color
@@ -58,14 +59,14 @@
 }
 
 .macro EnableVicBankWrite() {
-    // Address $DD02 coding scheme:
-    // Each bit disable or enable write access to VIC port "A". I.e. the address $DD00.
-    lda $dd02      // Load value of VIC port "A" data direction register
+    // Default value is: write enabled
+    lda $dd02
     ora #%00000011 // Enable both read and write on bit 0-1 on VIC port "A" ($DD00), the "VIC bank selection bits"
     sta $dd02
 }
 
 .macro SetVicBank0_0000_3FFF() {
+    // Default VIC bank
     EnableVicBankWrite()
 
     lda $dd00
@@ -75,6 +76,7 @@
 }
 
 .macro SetVicBank1_4000_7FFF() {
+    // Not default VIC bank (bank 0 is default)
     EnableVicBankWrite()
 
     lda $dd00
@@ -84,6 +86,7 @@
 }
 
 .macro SetVicBank2_8000_BFFF() {
+    // Not default VIC bank (bank 0 is default)
     EnableVicBankWrite()
 
     lda $dd00
@@ -93,6 +96,7 @@
 }
 
 .macro SetVicBank3_C000_FFFF() {
+    // Not default VIC bank (bank 0 is default)
     EnableVicBankWrite()
 
     lda $dd00
@@ -101,43 +105,50 @@
     sta $dd00
 }
 
-.macro SetMultiColorMode() {
-    lda $d016
-    ora #%00010000 // Set bit 4 high
-    sta $d016
-}
-
 .macro SetSingleColorMode() {
+    // Default color mode
     lda $d016
     and #%11101111 // Set bit 4 low
     sta $d016
 }
 
+.macro SetMultiColorMode() {
+    // Not default color mode (single color mode is default)
+    lda $d016
+    ora #%00010000 // Set bit 4 high
+    sta $d016
+}
+
 .macro SetTextMode() {
+    // Default presentation mode
     lda $d011
     and #%11011111 // Set bit 5 low
     sta $d011
 }
 
 .macro TextMode_Set40ColumnMode() {
+    // Default column mode during text mode
     lda $d016
     ora #%00001000 // Set bit 3 high
     sta $d016
 }
 
 .macro TextMode_Set38ColumnMode() {
+    // Not default column mode during text mode (40 column mode is default)
     lda $d016
     and #%11110111 // Set bit 3 low
     sta $d016
 }
 
 .macro TextMode_Set25RowMode() {
+    // Default row mode during text mode
     lda $d011
     ora #%00001000 // Set bit 3 high
     sta $d011
 }
 
 .macro TextMode_Set24RowMode() {
+    // Not default row mode during text mode (25 row mode is default)
     lda $d011
     and #%11110111 // Set bit 3 low
     sta $d011
@@ -202,6 +213,7 @@
 }
 
 .macro SetBitmapMode() {
+    // Not default presentation mode (text mode is default)
     lda $d011
     ora #%00100000 // Set bit 5 high
     sta $d011
