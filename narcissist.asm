@@ -56,18 +56,18 @@
 
 .const SYSTEM_IRQ_HANDLER = $ea81
 
-.const   address_border_color = $D020
-.const   address_screen_color = $D021
+.const address_border_color = $D020
+.const address_screen_color = $D021
 
-.const   constant_font_bank = 3
-.const   address_font = $0000 + ($800 * constant_font_bank) // = $1000
+.const constant_font_bank = 3
+.const address_font = $0000 + ($800 * constant_font_bank) // = $1000
 
-//.const   address_font_pointer = $D018
-//.const   address_font_character_lo_byte = $0A
-//.const   address_font_character_hi_byte = $0B
+//.const address_font_pointer = $D018
+//.const address_font_character_lo_byte = $0A
+//.const address_font_character_hi_byte = $0B
 
-//.const   address_sid_music_init = $1000
-//.const   address_sid_music_play = address_sid_music_init + 3
+//.const address_sid_music_init = $1000
+//.const address_sid_music_play = address_sid_music_init + 3
 
 .const constant_columns_per_line = 40
 .const constant_static_text_line_index = 24
@@ -96,7 +96,7 @@ Init:
         lda #%01111111
         sta $DC0D	      // "Switch off" interrupts signals from CIA-1
 
-        //lda $D01A      // enable VIC-II Raster Beam IRQ
+        //lda $D01A       // enable VIC-II Raster Beam IRQ
         //ora #$01
         //sta $D01A
 
@@ -164,9 +164,9 @@ irq1:
 
 irq2:
         // Used to: play music, set text mode
-        // Set bitmap mode
-        // Set multicolor mode
         // Using VIC bank 0
+        // Set text mode
+        // Set single color mode
         // Bitmap memory at $2000-$3FFF
         // Screen memory at $0C00
 
@@ -174,8 +174,9 @@ irq2:
 
         #if SCROLL
 
+        SetVicBank0_0000_3FFF()
         SetTextMode()
-        //TextMode_Set24RowMode()
+        TextMode_Set25RowMode()
         SetSingleColorMode()
         TextMode_SetFontBank3_VicRelative_1800_1FFF()
 
@@ -234,7 +235,7 @@ printText:
         cmp #$00  // Have we encountered text message null termination
         beq !+
 
-        ora #%10000000 // Invert character
+        ora #%10000000 // Invert text message character
         sta screen_memory_address + constant_columns_per_line * constant_static_text_line_index , x // print static message text data to screen character location
 
         lda #COLOR_RED
@@ -295,22 +296,22 @@ static_message_text:
 
 .print "SID Data"
 .print "--------"
-.print "location  = $" + toHexString(music.location)
-.print "init      = $" + toHexString(music.init)
-.print "play      = $" + toHexString(music.play)
-.print "songs     = " + music.songs
-.print "startSong = " + music.startSong
-.print "size      = $" + toHexString(music.size)
-.print "name      = " + music.name
-.print "author    = " + music.author
-.print "copyright = " + music.copyright
+.print "location        = $" + toHexString(music.location)
+.print "init            = $" + toHexString(music.init)
+.print "play            = $" + toHexString(music.play)
+.print "songs           = " + music.songs
+.print "startSong       = " + music.startSong
+.print "size            = $" + toHexString(music.size)
+.print "name            = " + music.name
+.print "author          = " + music.author
+.print "copyright       = " + music.copyright
 .print ""
 .print "Additional SID tech data"
 .print "------------------------"
-.print "header         = " + music.header
-.print "header version = " + music.version
-.print "flags          = " + toBinaryString(music.flags)
-.print "speed          = " + toBinaryString(music.speed)
-.print "startpage      = " + music.startpage
-.print "pagelength     = " + music.pagelength
+.print "header          = " + music.header
+.print "header version  = " + music.version
+.print "flags           = " + toBinaryString(music.flags)
+.print "speed           = " + toBinaryString(music.speed)
+.print "startpage       = " + music.startpage
+.print "pagelength      = " + music.pagelength
 #endif
