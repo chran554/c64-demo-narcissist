@@ -1,9 +1,12 @@
-//#define INCLUDE_MUSIC
-#undef INCLUDE_MUSIC
+//#define MUSIC
 #define SCROLL
-//#undef SCROLL
 #define RASTER_BORDER
 #define RASTER_SCREEN
+
+#undef MUSIC
+//#undef SCROLL
+//#undef RASTER_BORDER
+//#undef RASTER_SCREEN
 
 #if SCROLL
 .print "Including scroll"
@@ -11,7 +14,7 @@
 .print "Excluding scroll"
 #endif
 
-#if INCLUDE_MUSIC
+#if MUSIC
 .print "Including music"
 #else
 .print "Excluding music"
@@ -28,14 +31,6 @@
 #endif
 
 #import "macros.asm"
-
-.const KOALA_TEMPLATE = "C64FILE, Bitmap=$0000, ScreenRam=$1f40, ColorRam=$2328, BackgroundColor = $2710"
-//.var picture = LoadBinary("koala/me.kla", KOALA_TEMPLATE)
-.var picture = LoadBinary("koala/me7.kla", KOALA_TEMPLATE)
-
-#if INCLUDE_MUSIC
-.var music = LoadSid("sid/Delta_relocated_$5000.sid") //.var music = LoadSid("sid/Delta.sid")
-#endif
 
 .const COLOR_BLACK         = $00
 .const COLOR_WHITE         = $01
@@ -60,7 +55,7 @@
 .const address_screen_color = $D021
 
 .const constant_font_bank = 3
-.const address_font = $0000 + ($800 * constant_font_bank) // = $1000
+.const address_font = $4000 + ($800 * constant_font_bank) // = <VIC bank start> + ($800 * <fontbank nr>) = $4000 + ($800 * 3) = $5800
 
 //.const address_font_pointer = $D018
 //.const address_font_character_lo_byte = $0A
@@ -71,11 +66,17 @@
 
 .const constant_columns_per_line = 40
 .const constant_static_text_line_index = 24
-.const screen_memory_address = $0C00 // Screen memory start (in text mode)
+.const screen_memory_address = $4C00 // Screen memory start (in text mode, VIC mode 1)
 
 .const raster_position_irq1 = $10
 .const raster_position_irq2 = $EA
 
+.const KOALA_TEMPLATE = "C64FILE, Bitmap=$0000, ScreenRam=$1f40, ColorRam=$2328, BackgroundColor = $2710"
+.var picture = LoadBinary("koala/me7.kla", KOALA_TEMPLATE)
+
+#if MUSIC
+.var music = LoadSid("sid/Delta_relocated_$2000.sid") //.var music = LoadSid("sid/Delta.sid")
+#endif
 
  *=$0801 "basic start program"
 
@@ -84,7 +85,7 @@
  *=$0810 "program"
 
 Init:
-        #if INCLUDE_MUSIC
+        #if MUSIC
         // Init music
         ldx #0
         ldy #0
@@ -136,11 +137,11 @@ irq1:
         // Used to setup display of ego-image
         jsr rasterline_start
 
-        SetVicBank0_0000_3FFF()                             // Using VIC bank 0
+        SetVicBank1_4000_7FFF()                             // Using VIC bank 1
         SetMultiColorMode()                                 // Set multicolor mode
         SetBitmapMode()                                     // Set bitmap mode
-        BitmapMode_SetBitmapMemoryVicRelative_2000_3FFF()   // Bitmap memory at $2000-$3FFF
-        BitmapMode_SetScreenMemoryVicRelative_0C00_0FFF()   // Screen memory at $0C00
+        BitmapMode_SetBitmapMemoryVicRelative_2000_3FFF()   // Bitmap memory at $4000 + $2000-$3FFF -> $6000-$7FFF
+        BitmapMode_SetScreenMemoryVicRelative_0C00_0FFF()   // Screen memory at $4000 + $0C00 -> $4C00
 
         SetBorderColor(COLOR_WHITE)
         SetBackgroundColor(picture.getBackgroundColor())
@@ -174,7 +175,7 @@ irq2:
 
         #if SCROLL
 
-        SetVicBank0_0000_3FFF()
+        SetVicBank1_4000_7FFF()                             // Using VIC bank 1
         SetTextMode()
         TextMode_Set25RowMode()
         SetSingleColorMode()
@@ -184,7 +185,7 @@ irq2:
 
         #endif
 
-        #if INCLUDE_MUSIC
+        #if MUSIC
         jsr music.play
         #endif
 
@@ -236,6 +237,7 @@ printText:
         beq !+
 
         ora #%10000000 // Invert text message character
+        sta screen_memory_address + constant_columns_per_line * (constant_static_text_line_index -1) , x // print static message text data to screen character location
         sta screen_memory_address + constant_columns_per_line * constant_static_text_line_index , x // print static message text data to screen character location
 
         lda #COLOR_RED
@@ -258,11 +260,11 @@ static_message_text:
     .byte $00 // Scroll message text is null terminated
 #endif
 
-*=$0c00 "screen ram"; screenRam: .fill picture.getScreenRamSize(), picture.getScreenRam(i)
+*=$4c00 "screen ram"; screenRam: .fill picture.getScreenRamSize(), picture.getScreenRam(i)
 *=$4000 "color ram"; colorRam: .fill picture.getColorRamSize(), picture.getColorRam(i) // (1024b) Later copied to static ram location for color $D800 - $DBFF
-*=$2000 "picture bitmap"; pictureBitmap: .fill picture.getBitmapSize(), picture.getBitmap(i)
+*=$6000 "picture bitmap"; pictureBitmap: .fill picture.getBitmapSize(), picture.getBitmap(i)
 
-#if INCLUDE_MUSIC
+#if MUSIC
 *=music.location "music"; .fill music.size, music.getData(i)
 #endif
 
@@ -290,7 +292,7 @@ static_message_text:
 .print "Bitmap Size      = " + picture.getBitmapSize() + " bytes"
 .print "Background color = $" + toHexString(picture.getBackgroundColor())
 
-#if INCLUDE_MUSIC
+#if MUSIC
 .print ""
 .print ""
 
