@@ -1,5 +1,22 @@
 #importonce
 
+.const COLOR_BLACK         = $00
+.const COLOR_WHITE         = $01
+.const COLOR_RED           = $02
+.const COLOR_CYAN          = $03
+.const COLOR_PURPLE        = $04
+.const COLOR_GREEN         = $05
+.const COLOR_BLUE          = $06
+.const COLOR_YELLOW        = $07
+.const COLOR_ORANGE        = $08
+.const COLOR_BROWN         = $09
+.const COLOR_PINK          = $0A
+.const COLOR_DARK_GREY     = $0B
+.const COLOR_GREY          = $0C
+.const COLOR_LIGHT_GREEN   = $0D
+.const COLOR_LIGHT_BLUE    = $0E
+.const COLOR_LIGHT_GREY    = $0F
+
 // Address $D018 coding scheme
 // During text mode (see $D011 bit 5):
 // Bit 1-3: Pointer to character memory (adresses are offsets relative to VIC bank start):
@@ -27,7 +44,7 @@
 // Default(?): $97, %1001 0111
 
 // Address $D016 coding scheme:
-// Bit 0-2: "Horizontal raster scroll (value 0-7)"
+// Bit 0-2: "Horizontal raster scroll (value 0-7, default 0)"
 // Bit 3:   "40-col mode"
 // Bit 4:   "Multicolor mode"
 // Bit 5-7: ?
