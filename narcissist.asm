@@ -1,12 +1,14 @@
 //#define MUSIC
 #define SCROLL
 #define RASTER_BORDER
-#define RASTER_SCREEN
+//#define RASTER_SCREEN
+//#define STATIC_TEXT
 
 #undef MUSIC
 //#undef SCROLL
 //#undef RASTER_BORDER
-//#undef RASTER_SCREEN
+#undef RASTER_SCREEN
+#undef STATIC_TEXT
 
 #if SCROLL
 .print "Including scroll"
@@ -110,10 +112,13 @@ Init:
         inx
         bne !loop-
 
+        #if STATIC_TEXT
         jsr printText
+        #endif
 
         #if SCROLL
         jsr setScrollTextColor
+        jsr clearScrollText
         #endif
 
         lda #<irq1
@@ -295,10 +300,21 @@ setScrollTextColor:
         bne !-
 
         rts
+
+clearScrollText:
+        ldx #constant_columns_per_line
+        lda #$20 // screen code for space character
+!:
+        dex
+        sta screen_memory_address + constant_columns_per_line * (constant_static_text_line_index - 1), x
+        sta screen_memory_address + constant_columns_per_line * constant_static_text_line_index, x
+        bne !-
+
+        rts
 #endif
 
 
-#if SCROLL
+#if STATIC_TEXT
 printText:
         ldx #$00
 !:
@@ -354,7 +370,7 @@ scroll_message_text:
 // More fonts at http://kofler.dot.at/c64/
 // Load font to last 2k block of bank 3
 * = address_font "font"
-    .import binary "fonts/Giana sisters demo font 03-charset.bin"
+    .import binary "fonts/Giana sisters demo font 04-charset.bin"
 //    !bin "fonts/giana_sisters.font.64c",,2
 //    !bin "fonts/devils_collection_25_y.64c",,2
 //    !bin "fonts/double_char_font.bin"
