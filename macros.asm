@@ -359,3 +359,94 @@
     ora #%11110000 // Set bit 4-7 to 15 = %1111
     sta $d018
 }
+
+/**
+ * Pauses for an amount of cycles.
+ * The pause is implemented by linear consecutive NOP operations (and a BIT operation if amount cycles is odd).
+ * @param The amount of cycles to pause. Amount cycles must be >= 2.
+ */
+.pseudocommand pause cycles {
+	:ensureImmediateArgument(cycles)
+	.var x = floor(cycles.getValue())
+	.if (x<2) .error "Cant make a pause on " + x + " cycles"
+
+	// Take care of odd cyclecount
+	.if ([x&1]==1) {
+		bit $00
+		.eval x=x-3
+	}
+
+	// Take care of the rest
+	.if (x>0)
+		:nop #x/2
+}
+
+/**
+ * Pauses for an amount of cycles.
+ * The pause is implemented by operations of a loop + some extra for rest values.
+ * Uses Y register.
+ * @param The amount of cycles to pause. Amount cycles must be >= 2.
+ */
+.pseudocommand pause2 cycles {
+	:ensureImmediateArgument(cycles)
+	.var x = floor(cycles.getValue())
+	.if (x<2) .error "Cant make a pause on " + x + " cycles"
+
+	// Make a delay loop
+	.if (x>=11) {
+		.const cfirst = 6	// cycles for first loop
+		.const cextra = 5	// cycles for extra loops
+		.var noOfLoops = 1+floor([x-cfirst]/cextra)
+		.eval x = x - cfirst - [noOfLoops-1]*cextra
+		.if (x==1){
+			.eval x=x+cextra
+			.eval noOfLoops--
+		}
+		ldy #noOfLoops
+		dey
+		bne *-1
+	}
+
+	// Take care of odd cycle count
+	.if ([x&1]==1) {
+		bit $00
+		.eval x=x-3
+	}
+
+	// Take care of the rest
+	.if (x>0)
+		:nop #x/2
+}
+
+//---------------------------------
+// repetition commands
+//---------------------------------
+.macro ensureImmediateArgument(arg) {
+	.if (arg.getType()!=AT_IMMEDIATE)	.error "The argument must be immediate!"
+}
+.pseudocommand asl x {
+	:ensureImmediateArgument(x)
+	.for (var i=0; i<x.getValue(); i++) asl
+}
+.pseudocommand lsr x {
+	:ensureImmediateArgument(x)
+	.for (var i=0; i<x.getValue(); i++) lsr
+}
+.pseudocommand rol x {
+	:ensureImmediateArgument(x)
+	.for (var i=0; i<x.getValue(); i++) rol
+}
+.pseudocommand ror x {
+	:ensureImmediateArgument(x)
+	.for (var i=0; i<x.getValue(); i++) ror
+}
+
+.pseudocommand pla x {
+	:ensureImmediateArgument(x)
+	.for (var i=0; i<x.getValue(); i++) pla
+}
+
+.pseudocommand nop x {
+	:ensureImmediateArgument(x)
+	.for (var i=0; i<x.getValue(); i++) nop
+}
