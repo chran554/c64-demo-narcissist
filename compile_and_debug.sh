@@ -23,7 +23,8 @@ tools_path="/Users/christian/Projects/c64/tools"
 exomizer_exec="${tools_path}/Exomizer/Exomizer_3.02/exomizer"
 kickass_jar="${tools_path}/KickAssembler/KickAssembler_v5.16/KickAss.jar"
 vice_exec="${tools_path}/vice/vice-sdl2-3.4-r37694/x64sc.app/Contents/MacOS/x64sc"
-debug_exec="${tools_path}/c64_debugger/C64_65XE_Debugger_v0.64.58/C64_Debugger.app/Contents/MacOS/C64Debugger"
+#debug_exec="${tools_path}/c64_debugger/C64_65XE_Debugger_v0.64.58/C64_Debugger.app/Contents/MacOS/C64Debugger"
+debug_exec="${tools_path}/c64_debugger/C64_65XE_NESDebugger_v0.64.58.4/C64 Debugger.app/Contents/MacOS/C64 Debugger"
 cc1541_exec="${tools_path}/cc1541/cc1541_v3.2/cc1541"
 
 target_path="${projectFileDir}/target"
@@ -73,4 +74,4 @@ echo "C64 disc file:        ${c64_disc_file}"
 echo "--------------------------------------------------"
 
 "${debug_exec}" -prg "${finalProgramFile}" -wait 2000 -autojmp
-#$vice_exec -moncommands $viceMonitorCommandsFile -autostartprgmode 1 $finalProgramFile
+#$vice_exec -moncommands "${viceMonitorCommandsFile}" -autostartprgmode 1 "${finalProgramFile}"

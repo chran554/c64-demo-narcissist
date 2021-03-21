@@ -1,11 +1,11 @@
 //#define MUSIC
 #define SCROLL
-//#define DEBUG_RASTER_BORDER
+#define DEBUG_RASTER_BORDER
 //#define DEBUG_RASTER_SCREEN
 
 #undef MUSIC
 //#undef SCROLL
-#undef DEBUG_RASTER_BORDER
+//#undef DEBUG_RASTER_BORDER
 #undef DEBUG_RASTER_SCREEN
 
 #if SCROLL
@@ -50,8 +50,9 @@
 .const constant_static_text_line_index = 24
 .const screen_memory_address = $4C00 // Screen memory start (in text mode, VIC mode 1)
 
+.const raster_position_irq3 = $E8
+.const raster_position_irq2 = raster_position_irq3 - $7
 .const raster_position_irq1 = $10
-.const raster_position_irq2 = $E8
 
 .const KOALA_TEMPLATE = "C64FILE, Bitmap=$0000, ScreenRam=$1f40, ColorRam=$2328, BackgroundColor = $2710"
 //.var picture = LoadBinary("koala/me7.kla", KOALA_TEMPLATE)
@@ -178,6 +179,25 @@ irq1:
         //jmp !loop-
 
 irq2:
+        jsr rasterline_start
+
+        // Set next raster interrupt (raster interrupt irq3)
+        lda #<irq3
+        sta $0314
+        lda #>irq3
+        sta $0315
+
+        lda #raster_position_irq3 // Create raster interrupt at line
+        sta $d012
+
+        asl $D019	      // "Acknowledge" (asl do both read and write to memory location) the interrupt by clearing the VIC's interrupt flag.
+
+        jsr rasterline_end
+
+        pause #30
+        //jmp SYSTEM_IRQ_HANDLER
+
+irq3:
         // Used to: play music, set text mode
         // Using VIC bank 0
         // Set text mode
@@ -186,7 +206,7 @@ irq2:
         // Screen memory at $0C00
 
         #if DEBUG_RASTER_BORDER || DEBUG_RASTER_SCREEN
-        jsr rasterline_start
+        //jsr rasterline_start
         #endif
 
         #if SCROLL
@@ -205,7 +225,7 @@ irq2:
         #endif
 
         #if DEBUG_RASTER_BORDER || DEBUG_RASTER_SCREEN
-        jsr rasterline_end
+        //jsr rasterline_end
         #endif
 
 
@@ -231,8 +251,8 @@ irq2:
         sta $D012                         // Set the raster line number where interrupt should occur
 
         asl $D019	      // "Acknowledge" (asl do both read and write to memory location) the interrupt by clearing the VIC's interrupt flag.
-        jmp $EA31	      // Jump into KERNAL's standard interrupt service routine to handle keyboard scan, cursor display etc.
-        //jmp SYSTEM_IRQ_HANDLER
+        //jmp $EA31	      // Jump into KERNAL's standard interrupt service routine to handle keyboard scan, cursor display etc.
+        jmp SYSTEM_IRQ_HANDLER
         //rti
 
 // ---------------------------------------------
@@ -249,7 +269,7 @@ rasterline_start:
         rts
 
 rasterline_end:
-#if DEVUG_RASTER_BORDER
+#if DEBUG_RASTER_BORDER
         SetBorderColor(COLOR_WHITE)
 #endif
 #if DEBUG_RASTER_SCREEN
