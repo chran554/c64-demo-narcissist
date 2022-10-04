@@ -10,4 +10,4 @@ cd $projectFileDir
 projectFileDir=$(pwd)
 cd -
 
-"$utilities_path/compile_and_debug.sh" "$assemblerFile" "$projectFileDir" debug
+"$utilities_path/compile_and_debug.sh" "$assemblerFile"

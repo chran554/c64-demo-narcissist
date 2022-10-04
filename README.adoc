@@ -1,0 +1,7 @@
+= C64 Demo - Narcissist
+
+A demo made for my own ego, me, myself and I.
+
+NOTE: Work in progress!
+
+image::documentation/images/narcissist.png[Narcissist screenshot]
